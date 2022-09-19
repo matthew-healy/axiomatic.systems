@@ -34,6 +34,7 @@
             generator
             ghcid
             haskell-language-server
+            pkgs.nodePackages.tailwindcss
           ];
 
           withHoogle = true;
