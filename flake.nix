@@ -1,7 +1,7 @@
 {
   description = "the website axiomatic.systems";
 
-  nixConfig.bash-prompt = "\\033[1m\\033[38;5;219m[axiomatic.systems]\\033[38;5;45mλ\\033[0m ";
+  nixConfig.bash-prompt = "\n\\033[1m\\033[38;5;219m[axiomatic.systems]\\033[38;5;45mλ\\033[0m ";
 
   inputs = {
     nixpkgs.url = "nixpkgs/nixpkgs-unstable";
