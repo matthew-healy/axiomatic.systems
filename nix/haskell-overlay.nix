@@ -34,7 +34,7 @@ final: prev:
 
           website = prev.stdenv.mkDerivation {
             name = "axiomatic.systems";
-            buildInputs = [ generator ];
+            buildInputs = [ generator ] ++ (with prev.nodePackages; [ tailwindcss ]);
             src = prev.nix-gitignore.gitignoreSourcePure [
               ../.gitignore
               ".git"
