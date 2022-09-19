@@ -1,8 +1,11 @@
 --------------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 import           Data.Monoid (mappend)
+import "filepath" System.FilePath ( (</>) )
+import "temporary" System.IO.Temp ( withSystemTempDirectory )
+import "process" System.Process ( callProcess )
 import           Hakyll
-
 
 --------------------------------------------------------------------------------
 
@@ -25,7 +28,7 @@ main = hakyllWith config $ do
 
     match "css/*" $ do
         route   idRoute
-        compile compressCssCompiler
+        compile tailwindCssCompiler
 
     match (fromList ["about.md", "contact.md"]) $ do
         route   $ setExtension "html"
@@ -76,3 +79,29 @@ postCtx :: Context String
 postCtx =
     dateField "date" "%B %e, %Y" `mappend`
     defaultContext
+
+tailwindCssCompiler :: Compiler (Item String)
+tailwindCssCompiler = do
+    inFile <- getResourceFilePath
+    tailwindOutput <- unsafeCompiler
+      -- `withSystemTempDirectory` used here over `withSystemTempFile`
+      -- because with the latter this parent process would be holding
+      -- the file lock at the point tailwind tried to write to it.
+      $ withSystemTempDirectory "generator.tailwind.XXX"
+      $ \tmpDir -> do
+        -- No need to create the file as tailwind handles that
+        let outFile = tmpDir </> "tailwind-out.css"
+        callTailwind inFile outFile tailwindConfig
+        readFile outFile
+    makeItem tailwindOutput
+  where
+    tailwindConfig :: FilePath
+    tailwindConfig = "./src/tailwind.config.js"
+
+    callTailwind :: FilePath -> FilePath -> FilePath -> IO ()
+    callTailwind input output config = callProcess "tailwindcss"
+      [ "--input", input
+      , "--output", output
+      , "--config", config
+      , "--minify"
+      ]
