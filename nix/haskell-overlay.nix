@@ -30,11 +30,25 @@ final: prev:
             dontCheck
           ];
 
-          generator = hpPrev.callCabal2nix "generator" ../generator {};
+          tailwindcss = prev.nodePackages.tailwindcss;
+
+          generator =
+            let
+              tailwindcss = prev.nodePackages.tailwindcss;
+            in
+              prev.symlinkJoin {
+                name = "generator";
+                paths = [ (hpPrev.callCabal2nix "generator" ../generator {}) ];
+                buildInputs = [ prev.makeWrapper ];
+                postBuild = ''
+                  wrapProgram $out/bin/generator \
+                    --set PATH ${prev.lib.getBin tailwindcss}/bin
+                '';
+              };
 
           website = prev.stdenv.mkDerivation {
             name = "axiomatic.systems";
-            buildInputs = [ generator ] ++ (with prev.nodePackages; [ tailwindcss ]);
+            buildInputs = [ generator ];
             src = prev.nix-gitignore.gitignoreSourcePure [
               ../.gitignore
               ".git"

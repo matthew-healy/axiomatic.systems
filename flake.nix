@@ -17,6 +17,7 @@
         config = {};
         overlays = [ (import ./nix/haskell-overlay.nix) ];
         pkgs = import nixpkgs { inherit config overlays system; };
+        tailwindcss = pkgs.nodePackages.tailwindcss;
       in rec {
         defaultPackage = packages.website;
 
@@ -34,7 +35,7 @@
             generator
             ghcid
             haskell-language-server
-            pkgs.nodePackages.tailwindcss
+            tailwindcss
           ];
 
           withHoogle = true;
