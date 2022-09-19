@@ -2,8 +2,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 import           Data.Monoid (mappend)
-import "filepath" System.FilePath ( (</>) )
-import "temporary" System.IO.Temp ( withSystemTempDirectory )
 import "process" System.Process ( callProcess )
 import           Hakyll
 
@@ -83,16 +81,10 @@ postCtx =
 tailwindCssCompiler :: Compiler (Item String)
 tailwindCssCompiler = do
     inFile <- getResourceFilePath
-    tailwindOutput <- unsafeCompiler
-      -- `withSystemTempDirectory` used here over `withSystemTempFile`
-      -- because with the latter this parent process would be holding
-      -- the file lock at the point tailwind tried to write to it.
-      $ withSystemTempDirectory "generator.tailwind.XXX"
-      $ \tmpDir -> do
-        -- No need to create the file as tailwind handles that
-        let outFile = tmpDir </> "tailwind-out.css"
-        callTailwind inFile outFile tailwindConfig
-        readFile outFile
+    TmpFile tmp <- newTmpFile "tailwind.out.XXX"
+    tailwindOutput <- unsafeCompiler $ do
+      callTailwind inFile tmp tailwindConfig
+      readFile tmp
     makeItem tailwindOutput
   where
     tailwindConfig :: FilePath
