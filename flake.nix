@@ -24,7 +24,7 @@
 
         apps.default = flake-utils.lib.mkApp {
           drv = packages.generator;
-          exePath = "/bin/site";
+          exePath = "/bin/generator";
         };
 
         devShell = pkgs.axiomaticSystems.haskellPackages.shellFor {

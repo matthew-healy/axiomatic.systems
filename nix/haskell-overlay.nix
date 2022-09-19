@@ -47,7 +47,7 @@ final: prev:
               "${prev.glibcLocales}/lib/locale/locale-archive";
 
             buildPhase = ''
-              site build --verbose
+              generator build --verbose
             '';
 
             installPhase = ''
