@@ -37,10 +37,14 @@ copyImages = match "images/*" $ do
 
 
 processCssWithTailwind :: Rules ()
-processCssWithTailwind =
-  match "css/*" $ do
-    route   idRoute
-    compile tailwindCssCompiler
+processCssWithTailwind = do
+  -- Tailwind only compiles CSS rules which are actually used, so whenever we
+  -- change the templates we have to completely recompile our CSS.
+  templateDependency <- makePatternDependency "templates/*"
+  rulesExtraDependencies [templateDependency] $
+    create ["css/default.css"] $ do
+      route   idRoute
+      compile baseTailwindCssCompiler
 
 
 convertSupplementaryPagesMarkdownToHtml :: Rules ()
@@ -66,10 +70,9 @@ buildArchiveFromPostList = create ["archive.html"] $ do
   route idRoute
   compile $ do
     posts <- recentFirst =<< loadAll "posts/*"
-    let archiveCtx = listField "posts" postCtx (return posts)
-      <> constField "title" "Archives"
-      <> defaultContext
-
+    let archiveCtx = listField "posts" postCtx (return posts) <>
+                      constField "title" "Archives" <>
+                      defaultContext
     makeItem ""
       >>= loadAndApplyTemplate "templates/archive.html" archiveCtx
       >>= loadAndApplyTemplate "templates/default.html" archiveCtx
@@ -98,15 +101,17 @@ postCtx =
   dateField "date" "%B %e, %Y" <> defaultContext
 
 
-tailwindCssCompiler :: Compiler (Item String)
-tailwindCssCompiler = do
-  inFile <- getResourceFilePath
+baseTailwindCssCompiler :: Compiler (Item String)
+baseTailwindCssCompiler = do
   TmpFile tmp <- newTmpFile "tailwind.out.XXX"
   tailwindOutput <- unsafeCompiler $ do
-    callTailwind inFile tmp tailwindConfig
+    callTailwind tailwindBaseCss tmp tailwindConfig
     readFile tmp
   makeItem tailwindOutput
     where
+      tailwindBaseCss :: FilePath
+      tailwindBaseCss = "./src/css/base.tailwind.css"
+
       tailwindConfig :: FilePath
       tailwindConfig = "./src/tailwind.config.js"
 
