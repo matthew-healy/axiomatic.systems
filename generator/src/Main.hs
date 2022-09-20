@@ -18,61 +18,85 @@ config =
         , tmpDirectory         = "generator/_tmp"
         }
 
+
 main :: IO ()
 main = hakyllWith config $ do
-  match "images/*" $ do
-    route   idRoute
-    compile copyFileCompiler
+  copyImages
+  processCssWithTailwind
+  convertSupplementaryPagesMarkdownToHtml
+  convertPostsMarkdownToHtml
+  buildArchiveFromPostList
+  convertIndexMarkdownToHtml
+  compileTemplates
 
+
+copyImages :: Rules ()
+copyImages = match "images/*" $ do
+  route   idRoute
+  compile copyFileCompiler
+
+
+processCssWithTailwind :: Rules ()
+processCssWithTailwind =
   match "css/*" $ do
     route   idRoute
     compile tailwindCssCompiler
 
+
+convertSupplementaryPagesMarkdownToHtml :: Rules ()
+convertSupplementaryPagesMarkdownToHtml =
   match (fromList ["about.md", "contact.md"]) $ do
     route   $ setExtension "html"
     compile $ pandocCompiler
       >>= loadAndApplyTemplate "templates/default.html" defaultContext
       >>= relativizeUrls
 
-  match "posts/*" $ do
-    route $ setExtension "html"
-    compile $ pandocCompiler
-      >>= loadAndApplyTemplate "templates/post.html"    postCtx
-      >>= loadAndApplyTemplate "templates/default.html" postCtx
+
+convertPostsMarkdownToHtml :: Rules ()
+convertPostsMarkdownToHtml = match "posts/*" $ do
+  route   $ setExtension "html"
+  compile $ pandocCompiler
+    >>= loadAndApplyTemplate "templates/post.html"    postCtx
+    >>= loadAndApplyTemplate "templates/default.html" postCtx
+    >>= relativizeUrls
+
+
+buildArchiveFromPostList :: Rules ()
+buildArchiveFromPostList = create ["archive.html"] $ do
+  route idRoute
+  compile $ do
+    posts <- recentFirst =<< loadAll "posts/*"
+    let archiveCtx = listField "posts" postCtx (return posts)
+      <> constField "title" "Archives"
+      <> defaultContext
+
+    makeItem ""
+      >>= loadAndApplyTemplate "templates/archive.html" archiveCtx
+      >>= loadAndApplyTemplate "templates/default.html" archiveCtx
       >>= relativizeUrls
 
-  create ["archive.html"] $ do
-    route idRoute
-    compile $ do
-      posts <- recentFirst =<< loadAll "posts/*"
-      let archiveCtx = listField "posts" postCtx (return posts)
-        <> constField "title" "Archives"
-        <> defaultContext
 
-      makeItem ""
-        >>= loadAndApplyTemplate "templates/archive.html" archiveCtx
-        >>= loadAndApplyTemplate "templates/default.html" archiveCtx
-        >>= relativizeUrls
+convertIndexMarkdownToHtml :: Rules ()
+convertIndexMarkdownToHtml = match "index.md" $ do
+  route   $ setExtension "html"
+  compile $ do
+    posts <- recentFirst =<< loadAll "posts/*"
+    let indexCtx = listField "posts" postCtx (return posts) <> defaultContext
+
+    pandocCompiler
+      >>= applyAsTemplate indexCtx
+      >>= loadAndApplyTemplate "templates/default.html" indexCtx
+      >>= relativizeUrls
 
 
-  match "index.md" $ do
-    route $ setExtension "html"
-    compile $ do
-      posts <- recentFirst =<< loadAll "posts/*"
-      let indexCtx = listField "posts" postCtx (return posts) <> defaultContext
-
-      pandocCompiler
-        >>= applyAsTemplate indexCtx
-        >>= loadAndApplyTemplate "templates/default.html" indexCtx
-        >>= relativizeUrls
-
-  match "templates/*" $ compile templateBodyCompiler
-
+compileTemplates :: Rules ()
+compileTemplates = match "templates/*" $ compile templateBodyCompiler
 
 --------------------------------------------------------------------------------
 postCtx :: Context String
 postCtx =
   dateField "date" "%B %e, %Y" <> defaultContext
+
 
 tailwindCssCompiler :: Compiler (Item String)
 tailwindCssCompiler = do
